@@ -2,24 +2,33 @@ package sasl.xmpp.client.ssl;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jivesoftware.smack.util.SslContextFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.*;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class TrustAllSSLSocketFactory {
+public class TrustAllSSLSocketFactory implements SslContextFactory {
 
     private static final Logger log = LogManager.getLogger(TrustAllSSLSocketFactory.class);
 
-    public static SSLSocketFactory getSSLSocketFactory() {
+    public static HostnameVerifier createHostnameVerifier() {
+        log.debug("createHostnameVerifier");
+        return new HostnameVerifier() {
+            @Override
+            public boolean verify(String s, SSLSession sslSession) {
+                log.debug("HostnameVerifier#verify");
+                return true;
+            }
+        };
+    }
 
-        TrustManager localTrustManager = new X509TrustManager() {
+    public static X509TrustManager createTrustManager() {
+        log.debug("createTrustManager");
+        return new X509TrustManager() {
             @Override
             public X509Certificate[] getAcceptedIssuers() {
                 log.debug("X509TrustManager#getAcceptedIssuers");
@@ -34,11 +43,18 @@ public class TrustAllSSLSocketFactory {
                 log.debug("X509TrustManager#checkClientTrusted");
             }
         };
+    }
 
+    @Override
+    public SSLContext createSslContext() {
+        log.debug("createSslContext");
+        TrustManager localTrustManager = createTrustManager();
+        log.debug("localTrustManager: {}",  localTrustManager);
         try {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, new TrustManager[] { localTrustManager }, new SecureRandom());
-            return sslContext.getSocketFactory();
+            log.debug("sslContext: {}",  localTrustManager);
+            return sslContext;
         } catch (KeyManagementException | NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex.getMessage(), ex);
         }

@@ -9,53 +9,65 @@ import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
+import org.jivesoftware.smack.util.dns.dnsjava.DNSJavaResolver;
 import org.jxmpp.jid.EntityBareJid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
+import sasl.xmpp.client.ssl.TrustAllSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
-public class SaslXmppClient {
+public abstract class SaslXmppClient {
 
     private static final Logger log = LogManager.getLogger(SaslXmppClient.class);
 
     private static final String DOMAIN_NAME = "java-sasl-xmpp-server";
-    private static final String HOST = "java-sasl-xmpp-server";
-    private static final String USERNAME_ALICE = "alice";
+    private static final String HOST = "localhost";
+    private static final int PORT = 5222;
     private static final String USERNAME_BOB = "bob";
-    private static final String PASSWORD_ALICE = "alicepass";
-    private static final String PASSWORD_BOB = "bobpass";
-    private static final EntityBareJid ENTITY_BARE_JID_ALICE;
     private static final EntityBareJid ENTITY_BARE_JID_BOB;
 
     static {
         try {
-            ENTITY_BARE_JID_ALICE = JidCreate.entityBareFrom(USERNAME_ALICE + "@" + DOMAIN_NAME);
             ENTITY_BARE_JID_BOB = JidCreate.entityBareFrom(USERNAME_BOB + "@" + DOMAIN_NAME);
         } catch (XmppStringprepException ex) {
             throw new RuntimeException(ex.getMessage(), ex);
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    protected abstract XMPPTCPConnectionConfiguration.Builder configureConnectionFactory(XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder);
+
+    public void run() throws Exception {
 
         // create configuration
 
-        XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
-                .setUsernameAndPassword(USERNAME_ALICE, PASSWORD_ALICE)
+        XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder = XMPPTCPConnectionConfiguration.builder()
                 .setXmppDomain(DOMAIN_NAME)
                 .setHost(HOST)
-                .build();
-        log.debug("Created configuration: " + config);
+                .setPort(PORT)
+                .setSslContextFactory(new TrustAllSSLSocketFactory())
+                .setCustomX509TrustManager(TrustAllSSLSocketFactory.createTrustManager())
+                .setHostnameVerifier(TrustAllSSLSocketFactory.createHostnameVerifier());
+        connectionConfigurationBuilder = this.configureConnectionFactory(connectionConfigurationBuilder);
+        XMPPTCPConnectionConfiguration connectionConfiguration = connectionConfigurationBuilder.build();
+        log.debug("Created configuration: " + connectionConfiguration);
+
+        // setup DNS
+
+        DNSJavaResolver.setup();
+        log.debug("Setup DNSResolver");
 
         // establish a connection to the server and log in
 
-        AbstractXMPPConnection connection = new XMPPTCPConnection(config);
+        AbstractXMPPConnection connection = new XMPPTCPConnection(connectionConfiguration);
         log.debug("Connection: " + connection);
 
         connection.connect();
+        log.debug("Connected? " + connection);
+
         connection.login();
-        log.debug("Logged in.");
+        log.debug("Logged in? " + connection);
+        log.debug("SASL mechanism: " + connection.getUsedSaslMechansism());
 
         // chat
 
@@ -63,21 +75,25 @@ public class SaslXmppClient {
         Chat chat = chatManager.chatWith(ENTITY_BARE_JID_BOB);
         log.debug("Created chat: " + chat);
 
-        chat.send("Hello!");
-
         // add listener
 
         chatManager.addIncomingListener(new IncomingChatMessageListener() {
             @Override
             public void newIncomingMessage(EntityBareJid from, Message message, Chat chat) {
-                System.out.println("New message from " + from + ": " + message.getBody());
+                log.info("New message from " + from + ": " + message.getBody());
             }
         });
 
         // loop
 
+        int i = 1;
         while (connection.isConnected()) {
-            Thread.sleep(TimeUnit.SECONDS.toMillis(10));
+            String message = "Hello! (" + i++ + ")";
+            chat.send(message);
+            log.debug("Sent message: " + message);
+            Thread.sleep(TimeUnit.SECONDS.toMillis(5));
+            log.info("Waiting.");
+            Thread.sleep(TimeUnit.SECONDS.toMillis(5));
         }
     }
 }
