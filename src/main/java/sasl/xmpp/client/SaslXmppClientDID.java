@@ -1,5 +1,8 @@
 package sasl.xmpp.client;
 
+import demo.sasl.client.SaslClientCallbackHandler;
+import demo.sasl.client.integration.UserIntegrationInteractive;
+import demo.sasl.client.integration.UserIntegrationWithDID;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,25 +16,15 @@ import sasl.mechanism.did.DIDChallengeSaslProvider;
 import sasl.mechanism.did.client.DIDChallengeSaslClient;
 import sasl.xmpp.client.debug.SaslClientDebug;
 
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.sasl.SaslClient;
-import javax.security.sasl.SaslException;
+import javax.security.auth.callback.*;
+import javax.security.sasl.*;
+import java.io.IOException;
 import java.security.Security;
+import java.util.Map;
 
 public class SaslXmppClientDID extends SaslXmppClient {
 
     private static final Logger log = LogManager.getLogger(SaslXmppClientDID.class);
-
-    private static final String DID = "did:key:z6MkfePUhxLV6cM54cgZ4bGmnEdTNm3WDf4arwh5kR3dH51D";
-    private static final String PRIVATEKEY = """
-            {
-                "kid": "did:key:z6MkfePUhxLV6cM54cgZ4bGmnEdTNm3WDf4arwh5kR3dH51D#z6MkfePUhxLV6cM54cgZ4bGmnEdTNm3WDf4arwh5kR3dH51D",
-                "kty": "OKP",
-                "crv": "Ed25519",
-                "x": "EbV6-hVmDiD3DKTUgsf2SjjnO7t0ttwMhStQ5JyCFhw",
-                "d": "vGjHIZzZxS3R4mo-V0I_S72ULXDqa2INqkAtuvqJUN8"
-            }
-            """;
 
     static {
         Security.addProvider(new DIDChallengeSaslProvider());
@@ -49,7 +42,7 @@ public class SaslXmppClientDID extends SaslXmppClient {
     @Override
     protected XMPPTCPConnectionConfiguration.Builder configureConnectionFactory(XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder) {
         return connectionConfigurationBuilder
-                .setUsernameAndPassword(DID, null)
+                .allowEmptyOrNullUsernames()
                 .addEnabledSaslMechanism("DID-CHALLENGE");
     }
 
@@ -86,8 +79,19 @@ public class SaslXmppClientDID extends SaslXmppClient {
 
         @Override
         protected void authenticateInternal() throws SmackJavaxSaslException {
-            super.authenticateInternal();
-            log.info("authenticateInternal -> " + this.sc);
+            String[] mechanisms = { getName() };
+            Map<String, String> props = getSaslProps();
+            String authzid = null;
+            if (authorizationId != null) {
+                authzid = authorizationId.toString();
+            }
+            try {
+                sc = Sasl.createSaslClient(mechanisms, authzid, "xmpp", getServerName().toString(), props,
+                        new SaslClientCallbackHandler(new UserIntegrationInteractive()));
+            }
+            catch (SaslException e) {
+                throw new SmackJavaxSaslException(e);
+            }
         }
 
         @Override
@@ -99,53 +103,8 @@ public class SaslXmppClientDID extends SaslXmppClient {
         @Override
         protected byte[] getAuthenticationText() throws SmackJavaxSaslException {
             byte[] result = super.getAuthenticationText();
-            log.info("getAuthenticationText -> " + Hex.encodeHexString(result));
+            log.info("getAuthenticationText -> " + (result == null ? result : Hex.encodeHexString(result)));
             return result;
-        }
-    }
-
-    private static class SASLDIDChallengeMechanism extends SASLMechanism {
-
-        private final SaslClient saslClient;
-
-        private SASLDIDChallengeMechanism() {
-            try {
-                this.saslClient = new DIDChallengeSaslClient(null, null);
-            } catch (SaslException ex) {
-                throw new RuntimeException(ex.getMessage(), ex);
-            }
-        }
-
-        @Override
-        protected void authenticateInternal(CallbackHandler cbh) throws SmackException.SmackSaslException {
-            throw new UnsupportedOperationException("Not supported");
-        }
-
-        @Override
-        protected byte[] getAuthenticationText() throws SmackException.SmackSaslException {
-            throw new UnsupportedOperationException("Not supported");
-        }
-
-        @Override
-        public String getName() {
-            return DIDChallengeSaslProvider.MECHANISM_NAME;
-        }
-
-        @Override
-        public int getPriority() {
-            return 0;
-        }
-
-        @Override
-        protected void checkIfSuccessfulOrThrow() throws SmackException.SmackSaslException {
-            if (!this.saslClient.isComplete()) {
-                throw new SmackException.SmackSaslException(this.getName() + " was not completed");
-            }
-        }
-
-        @Override
-        protected SASLMechanism newInstance() {
-            return new SASLDIDChallengeMechanism();
         }
     }
 }
