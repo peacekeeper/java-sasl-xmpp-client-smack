@@ -35,8 +35,8 @@ public class SaslXmppClientDID extends SaslXmppClient {
     }
 
     static {
-        log.debug("SASL mechanisms: " + SASLAuthentication.getRegisterdSASLMechanisms());
         SASLAuthentication.registerSASLMechanism(new SASLDIDChallengeJavaXMechanism());
+        log.debug("SASL mechanisms: " + SASLAuthentication.getRegisterdSASLMechanisms());
     }
 
     @Override
@@ -54,6 +54,10 @@ public class SaslXmppClientDID extends SaslXmppClient {
     public static void main(String[] args) throws Exception {
         new SaslXmppClientDID().run();
     }
+
+    /*
+     * Helper classes
+     */
 
     private static class SASLDIDChallengeJavaXMechanism extends SASLJavaXMechanism {
 
@@ -87,7 +91,7 @@ public class SaslXmppClientDID extends SaslXmppClient {
             }
             try {
                 sc = Sasl.createSaslClient(mechanisms, authzid, "xmpp", getServerName().toString(), props,
-                        new SaslClientCallbackHandler(new UserIntegrationInteractive()));
+                        new SaslClientCallbackHandler(new UserIntegrationWithDID()));
             }
             catch (SaslException e) {
                 throw new SmackJavaxSaslException(e);
