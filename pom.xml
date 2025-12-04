@@ -21,7 +21,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.4.1</version>
                 <configuration>
-                    <mainClass>sasl.xmpp.client.SaslXmppClientSCRAM</mainClass>
+                    <mainClass>sasl.xmpp.client.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>
@@ -67,6 +67,7 @@
             <groupId>org.igniterealtime.smack</groupId>
             <artifactId>smack-xmlparser-stax</artifactId>
             <version>4.4.8</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.igniterealtime.smack</groupId>

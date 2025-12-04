@@ -27,6 +27,8 @@ public abstract class SaslXmppClient {
     private static final String USERNAME_BOB = "bob";
     private static final EntityBareJid ENTITY_BARE_JID_BOB;
 
+    private final boolean interactive;
+
     static {
         try {
             ENTITY_BARE_JID_BOB = JidCreate.entityBareFrom(USERNAME_BOB + "@" + DOMAIN_NAME);
@@ -36,6 +38,10 @@ public abstract class SaslXmppClient {
     }
 
     protected abstract XMPPTCPConnectionConfiguration.Builder configureConnectionFactory(XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder);
+
+    protected SaslXmppClient(boolean interactive) {
+        this.interactive = interactive;
+    }
 
     public void run() throws Exception {
 
@@ -95,5 +101,9 @@ public abstract class SaslXmppClient {
             log.info("Waiting.");
             Thread.sleep(TimeUnit.SECONDS.toMillis(5));
         }
+    }
+
+    public boolean isInteractive() {
+        return this.interactive;
     }
 }
