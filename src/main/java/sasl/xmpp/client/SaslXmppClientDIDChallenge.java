@@ -1,11 +1,11 @@
 package sasl.xmpp.client;
 
+import demo.sasl.client.debug.SaslClientDebug;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import sasl.mechanism.did.DIDChallengeSaslProvider;
-import sasl.xmpp.client.debug.SaslClientDebug;
 
 import java.security.Security;
 
