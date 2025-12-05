@@ -42,8 +42,18 @@ public class SASLDIDChallengeJavaXMechanism extends SASLJavaXMechanism {
     }
 
     @Override
+    public boolean authzidSupported() {
+        return true;
+    }
+
+    @Override
     public boolean requiresPassword() {
         return false;
+    }
+
+    @Override
+    public boolean isAuthenticationSuccessful() {
+        return true;
     }
 
     @Override
@@ -60,6 +70,7 @@ public class SASLDIDChallengeJavaXMechanism extends SASLJavaXMechanism {
         } catch (SaslException e) {
             throw new SmackJavaxSaslException(e);
         }
+        log.info("authenticateInternal -> " + this.sc);
     }
 
     @Override
@@ -72,6 +83,13 @@ public class SASLDIDChallengeJavaXMechanism extends SASLJavaXMechanism {
     protected byte[] getAuthenticationText() throws SmackJavaxSaslException {
         byte[] result = super.getAuthenticationText();
         log.info("getAuthenticationText -> " + (result == null ? result : Hex.encodeHexString(result)));
+        return result;
+    }
+
+    @Override
+    protected byte[] evaluateChallenge(byte[] challenge) throws SmackJavaxSaslException {
+        byte[] result = super.evaluateChallenge(challenge);
+        log.info("evaluateChallenge " + (challenge == null ? null : Hex.encodeHexString(challenge)) + " -> " + (result == null ? result : Hex.encodeHexString(result)));
         return result;
     }
 
