@@ -52,11 +52,6 @@ public class SASLDIDChallengeJavaXMechanism extends SASLJavaXMechanism {
     }
 
     @Override
-    public boolean isAuthenticationSuccessful() {
-        return true;
-    }
-
-    @Override
     protected void authenticateInternal() throws SmackJavaxSaslException {
         String[] mechanisms = {getName()};
         Map<String, String> props = getSaslProps();
