@@ -2,22 +2,28 @@ package sasl.xmpp.client;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jivesoftware.smack.AbstractXMPPConnection;
+import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.chat2.Chat;
 import org.jivesoftware.smack.chat2.ChatManager;
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.packet.MessageBuilder;
+import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.sm.predicates.ForEveryMessage;
+import org.jivesoftware.smack.sm.predicates.ForEveryStanza;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
+import org.jivesoftware.smack.util.Consumer;
 import org.jivesoftware.smack.util.dns.dnsjava.DNSJavaResolver;
 import org.jxmpp.jid.EntityBareJid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
 import sasl.xmpp.client.ssl.TrustAllSSLSocketFactory;
 
+import javax.security.auth.callback.UnsupportedCallbackException;
 import java.util.concurrent.TimeUnit;
 
-public abstract class SaslXmppClient {
+public abstract class SaslXmppClient implements ConnectionListener, StanzaListener {
 
     private static final Logger log = LogManager.getLogger(SaslXmppClient.class);
 
@@ -37,7 +43,7 @@ public abstract class SaslXmppClient {
         }
     }
 
-    protected abstract XMPPTCPConnectionConfiguration.Builder configureConnectionFactory(XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder);
+    protected abstract XMPPTCPConnectionConfiguration.Builder configureConnectionFactory(XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder) throws UnsupportedCallbackException;
 
     protected SaslXmppClient(boolean interactive) {
         this.interactive = interactive;
@@ -66,6 +72,8 @@ public abstract class SaslXmppClient {
         // establish a connection to the server and log in
 
         AbstractXMPPConnection connection = new XMPPTCPConnection(connectionConfiguration);
+        connection.addConnectionListener(this);
+        connection.addStanzaListener(this, ForEveryStanza.INSTANCE);
         log.debug("Connection: " + connection);
 
         connection.connect();
@@ -101,6 +109,36 @@ public abstract class SaslXmppClient {
             log.info("Waiting.");
             Thread.sleep(TimeUnit.SECONDS.toMillis(5));
         }
+    }
+
+    @Override
+    public void processStanza(Stanza packet) throws SmackException.NotConnectedException, InterruptedException, SmackException.NotLoggedInException {
+        log.info("STANZA: " + packet);
+    }
+
+    @Override
+    public void connecting(XMPPConnection connection) {
+        log.info("CONNECTING: " + connection);
+    }
+
+    @Override
+    public void connected(XMPPConnection connection) {
+        log.info("CONNECTED: " + connection);
+    }
+
+    @Override
+    public void authenticated(XMPPConnection connection, boolean resumed) {
+        log.info("AUTHENTICATED: " + connection + ", " + resumed);
+    }
+
+    @Override
+    public void connectionClosed() {
+        log.info("CONNECTION CLOSED");
+    }
+
+    @Override
+    public void connectionClosedOnError(Exception e) {
+        log.info("CONNECTION CLOSED ON ERROR: " + e.getMessage());
     }
 
     public boolean isInteractive() {

@@ -7,6 +7,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+
 public class SaslXmppClientScramSHA1 extends SaslXmppClient {
 
     private static final Logger log = LogManager.getLogger(SaslXmppClientScramSHA1.class);
@@ -16,10 +21,13 @@ public class SaslXmppClientScramSHA1 extends SaslXmppClient {
     }
 
     @Override
-    protected XMPPTCPConnectionConfiguration.Builder configureConnectionFactory(XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder) {
+    protected XMPPTCPConnectionConfiguration.Builder configureConnectionFactory(XMPPTCPConnectionConfiguration.Builder connectionConfigurationBuilder) throws UnsupportedCallbackException {
         SaslClientCallbackHandler saslClientCallbackHandler = new SaslClientCallbackHandler(this.isInteractive() ? new UserIntegrationInteractive() : new UserIntegrationDemoUsername());
-        String username = saslClientCallbackHandler.getUserIntegration().getName();
-        String password = saslClientCallbackHandler.getUserIntegration().getPassword();
+        NameCallback nc = new NameCallback("name");
+        PasswordCallback pc = new PasswordCallback("password", false);
+        saslClientCallbackHandler.handle(new Callback[] { nc, pc });
+        String username = nc.getName();
+        String password = pc.getPassword() == null ? null : new String(pc.getPassword());
         return connectionConfigurationBuilder
                 .setUsernameAndPassword(username, password);
     }
