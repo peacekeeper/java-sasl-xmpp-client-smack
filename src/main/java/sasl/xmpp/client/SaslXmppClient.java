@@ -6,9 +6,7 @@ import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.chat2.Chat;
 import org.jivesoftware.smack.chat2.ChatManager;
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener;
-import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.MessageBuilder;
-import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.sm.predicates.ForEveryMessage;
 import org.jivesoftware.smack.sm.predicates.ForEveryStanza;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
@@ -114,6 +112,10 @@ public abstract class SaslXmppClient implements ConnectionListener, StanzaListen
     @Override
     public void processStanza(Stanza packet) throws SmackException.NotConnectedException, InterruptedException, SmackException.NotLoggedInException {
         log.info("STANZA: " + packet);
+        if (packet.getError() != null) {
+            StanzaError stanzaError = packet.getError();
+            log.error(stanzaError.toString());
+        }
     }
 
     @Override
